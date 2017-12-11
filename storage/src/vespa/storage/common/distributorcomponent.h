@@ -30,6 +30,7 @@
 #include <vespa/storage/config/distributorconfiguration.h>
 #include <vespa/storage/config/config-stor-distributormanager.h>
 #include <vespa/storage/config/config-stor-visitordispatcher.h>
+#include <vespa/storage/config/config-bucketspaces.h>
 #include <vespa/storageapi/defs.h>
 
 namespace storage {
@@ -41,21 +42,23 @@ namespace lib {
     class IdealNodeCalculator;
 }
 
-typedef vespa::config::content::core::internal::InternalStorDistributormanagerType DistributorConfig;
-typedef vespa::config::content::core::internal::InternalStorVisitordispatcherType VisitorConfig;
+using DistributorConfig = vespa::config::content::core::internal::InternalStorDistributormanagerType;
+using VisitorConfig = vespa::config::content::core::internal::InternalStorVisitordispatcherType;
+using BucketSpacesConfig = vespa::config::content::core::internal::InternalBucketspacesType;
 
 struct UniqueTimeCalculator {
-    virtual ~UniqueTimeCalculator() {}
+    virtual ~UniqueTimeCalculator() = default;
     virtual api::Timestamp getUniqueTimestamp() = 0;
 };
 
 struct DistributorManagedComponent
 {
-    virtual ~DistributorManagedComponent() {}
+    virtual ~DistributorManagedComponent() = default;
 
     virtual void setTimeCalculator(UniqueTimeCalculator&) = 0;
     virtual void setDistributorConfig(const DistributorConfig&)= 0;
     virtual void setVisitorConfig(const VisitorConfig&) = 0;
+    virtual void setBucketSpacesConfig(const BucketSpacesConfig&) = 0;
 };
 
 struct DistributorComponentRegister : public virtual StorageComponentRegister
@@ -70,6 +73,7 @@ class DistributorComponent : public StorageComponent,
     mutable UniqueTimeCalculator* _timeCalculator;
     DistributorConfig             _distributorConfig;
     VisitorConfig                 _visitorConfig;
+    BucketSpacesConfig            _bucketSpacesConfig;
     DistributorConfiguration      _totalConfig;
 
     void setTimeCalculator(UniqueTimeCalculator& utc) override { _timeCalculator = &utc; }
@@ -81,21 +85,28 @@ class DistributorComponent : public StorageComponent,
         _visitorConfig = c;
         _totalConfig.configure(c);
     }
+    void setBucketSpacesConfig(const BucketSpacesConfig& c) override {
+        // TODO does this need to be in _totalConfig?
+        _bucketSpacesConfig = c;
+    }
 
 public:
     typedef std::unique_ptr<DistributorComponent> UP;
 
     DistributorComponent(DistributorComponentRegister& compReg, vespalib::stringref name);
-    ~DistributorComponent();
+    ~DistributorComponent() override;
 
     api::Timestamp getUniqueTimestamp() const {
         assert(_timeCalculator); return _timeCalculator->getUniqueTimestamp();
     }
-    const DistributorConfig& getDistributorConfig() const {
+    const DistributorConfig& getDistributorConfig() const noexcept {
         return _distributorConfig;
     }
-    const VisitorConfig& getVisitorConfig() const {
+    const VisitorConfig& getVisitorConfig() const noexcept {
         return _visitorConfig;
+    }
+    const BucketSpacesConfig& getBucketSpacesConfig() const noexcept {
+        return _bucketSpacesConfig;
     }
     const DistributorConfiguration&
     getTotalDistributorConfig() const {

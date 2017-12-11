@@ -24,6 +24,10 @@ public:
     BucketSpaceMap::const_iterator begin() const { return _map.begin(); }
     BucketSpaceMap::const_iterator end() const { return _map.end(); }
 
+    // FIXME..!
+    void enableGlobalBucketSpace();
+    bool hasGlobalBucketSpace() const;
+
     BucketSpaces getBucketSpaces() const;
     size_t getBucketMemoryUsage() const;
 

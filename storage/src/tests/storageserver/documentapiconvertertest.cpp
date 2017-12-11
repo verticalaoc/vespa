@@ -60,13 +60,13 @@ struct MockBucketResolver : public BucketResolver {
 
 struct DocumentApiConverterTest : public CppUnit::TestFixture
 {
-    MockBucketResolver _bucketResolver;
+    std::shared_ptr<MockBucketResolver> _bucketResolver;
     std::unique_ptr<DocumentApiConverter> _converter;
     const DocumentTypeRepo::SP _repo;
     const DataType& _html_type;
 
     DocumentApiConverterTest()
-        : _bucketResolver(),
+        : _bucketResolver(std::make_shared<MockBucketResolver>()),
           _repo(std::make_shared<DocumentTypeRepo>(readDocumenttypesConfig(
                     TEST_PATH("config-doctypes.cfg")))),
           _html_type(*_repo->getDocumentType("text/html"))

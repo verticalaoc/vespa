@@ -20,6 +20,8 @@ class DistributorProcess : public Process {
             _distributorConfigHandler;
     config::ConfigHandle<vespa::config::content::core::StorVisitordispatcherConfig>::UP
             _visitDispatcherConfigHandler;
+    config::ConfigHandle<vespa::config::content::core::BucketspacesConfig>::UP
+            _bucketSpacesConfig;
 
 public:
     DistributorProcess(const config::ConfigUri & configUri);

@@ -46,6 +46,7 @@ public:
 
     void handleConfigChange(vespa::config::content::core::StorDistributormanagerConfig&);
     void handleConfigChange(vespa::config::content::core::StorVisitordispatcherConfig&);
+    void handleConfigChange(vespa::config::content::core::BucketspacesConfig&);
 
 private:
     void initializeNodeSpecific() override;

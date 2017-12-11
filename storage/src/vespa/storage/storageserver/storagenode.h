@@ -127,8 +127,10 @@ private:
     std::unique_ptr<StateReporter>             _stateReporter;
     std::unique_ptr<StateManager>              _stateManager;
 
+protected: // FIXME change abstraction here, this is just to allow distributor subclass to iterate over the chain
         // The storage chain can depend on anything.
     std::unique_ptr<StorageLink>               _chain;
+private:
 
     /** Implementation of config callbacks. */
     void configure(std::unique_ptr<StorServerConfig> config) override;

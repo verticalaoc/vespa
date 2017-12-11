@@ -42,6 +42,9 @@ DistributorProcess::setupConfig(uint64_t subscribeTimeout)
     _visitDispatcherConfigHandler
             = _configSubscriber.subscribe<vespa::config::content::core::StorVisitordispatcherConfig>(
                     _configUri.getConfigId(), subscribeTimeout);
+    _bucketSpacesConfig
+            = _configSubscriber.subscribe<vespa::config::content::core::BucketspacesConfig>(
+                    _configUri.getConfigId(), subscribeTimeout);
     Process::setupConfig(subscribeTimeout);
 }
 
@@ -54,6 +57,9 @@ DistributorProcess::updateConfig()
     }
     if (_visitDispatcherConfigHandler->isChanged()) {
         _node->handleConfigChange(*_visitDispatcherConfigHandler->getConfig());
+    }
+    if (_bucketSpacesConfig->isChanged()) {
+        _node->handleConfigChange(*_bucketSpacesConfig->getConfig());
     }
 }
 
@@ -78,6 +84,7 @@ DistributorProcess::createNode()
     _node.reset(new DistributorNode(_configUri, _context, *this, _activeFlag, StorageLink::UP()));
     _node->handleConfigChange(*_distributorConfigHandler->getConfig());
     _node->handleConfigChange(*_visitDispatcherConfigHandler->getConfig());
+    _node->handleConfigChange(*_bucketSpacesConfig->getConfig());
 }
 
 } // storage

@@ -170,7 +170,7 @@ private:
 
     config::ConfigUri _configUri;
     std::atomic<bool> _closed;
-    std::unique_ptr<BucketResolver> _bucketResolver;
+    std::shared_ptr<BucketResolver> _bucketResolver;
     DocumentApiConverter _docApiConverter;
     framework::Thread::UP _thread;
 
@@ -187,6 +187,9 @@ public:
     void enqueue(const std::shared_ptr<api::StorageMessage> & msg);
     mbus::RPCMessageBus& getMessageBus() { assert(_mbus.get()); return *_mbus; }
     const PriorityConverter& getPriorityConverter() const { return _docApiConverter.getPriorityConverter(); }
+
+    DocumentApiConverter& docApiConverter() { return _docApiConverter; }
+    const DocumentApiConverter& docApiConverter() const { return _docApiConverter; }
 
     /**
      * From StorageLink. Called when messages arrive from storage

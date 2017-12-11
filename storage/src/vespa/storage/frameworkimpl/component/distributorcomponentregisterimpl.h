@@ -28,6 +28,7 @@ class DistributorComponentRegisterImpl
     UniqueTimeCalculator* _timeCalculator;
     DistributorConfig _distributorConfig;
     VisitorConfig _visitorConfig;
+    BucketSpacesConfig _bucketSpacesConfig;
     lib::ClusterState _clusterState;
 
 public:
@@ -40,6 +41,7 @@ public:
     void setTimeCalculator(UniqueTimeCalculator& calc);
     void setDistributorConfig(const DistributorConfig&);
     void setVisitorConfig(const VisitorConfig&);
+    void setBucketSpacesConfig(const BucketSpacesConfig& c);
 private:
     void handleNewState() override;
     void setNodeStateUpdater(NodeStateUpdater& updater) override;

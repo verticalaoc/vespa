@@ -66,6 +66,14 @@ DistributorComponentRegisterImpl::setVisitorConfig(const VisitorConfig& c)
     }
 }
 
+void DistributorComponentRegisterImpl::setBucketSpacesConfig(const BucketSpacesConfig& c) {
+    vespalib::LockGuard lock(_componentLock);
+    _bucketSpacesConfig = c;
+    for (uint32_t i=0; i<_components.size(); ++i) {
+        _components[i]->setBucketSpacesConfig(c);
+    }
+}
+
 void
 DistributorComponentRegisterImpl::setNodeStateUpdater(NodeStateUpdater& updater)
 {

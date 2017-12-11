@@ -14,6 +14,7 @@
 #include <vespa/storage/common/hostreporter/hostinfo.h>
 #include <vespa/storageframework/generic/status/xmlstatusreporter.h>
 
+#include <iostream> // TEMP
 
 #include <vespa/log/log.h>
 LOG_SETUP(".distributor-main");
@@ -117,7 +118,9 @@ Distributor::Distributor(DistributorComponentRegister& compReg,
     _distributorStatusDelegate.registerStatusPage();
     _bucketDBStatusDelegate.registerStatusPage();
     hostInfoReporterRegistrar.registerReporter(&_hostInfoReporter);
-    _bucketSpaceRepo->setDefaultDistribution(_component.getDistribution());
+    // TODO must ensure that this is called on startup, since we won't get an
+    // explicit storageDistributionChanged edge unless config actually changes..!
+    propagateDefaultDistribution(_component.getDistribution());
 };
 
 Distributor::~Distributor()
@@ -190,7 +193,7 @@ Distributor::setNodeStateUp()
 void
 Distributor::onOpen()
 {
-    LOG(debug, "Distributor::onOpen invoked");
+    LOG(info, "Distributor::onOpen invoked");
     setNodeStateUp();
     framework::MilliSecTime maxProcessingTime(60 * 1000);
     framework::MilliSecTime waitTime(1000);
@@ -436,21 +439,24 @@ Distributor::leaveRecoveryMode()
 void
 Distributor::storageDistributionChanged()
 {
+    // FIXME this is _not_ thread safe!
     if (!_distribution.get()
         || *_component.getDistribution() != *_distribution)
     {
-        LOG(debug,
+        LOG(info,
             "Distribution changed to %s, must refetch bucket information",
             _component.getDistribution()->toString().c_str());
 
-        // FIXME this is not thread safe
         _nextDistribution = _component.getDistribution();
     } else {
-        LOG(debug,
+        LOG(info,
             "Got distribution change, but the distribution %s was the same as "
             "before: %s",
             _component.getDistribution()->toString().c_str(),
             _distribution->toString().c_str());
+    }
+    if (!_activeBucketSpaceConfig || (*_activeBucketSpaceConfig != _component.getBucketSpacesConfig())) {
+        _nextBucketSpaceConfig = std::make_shared<BucketSpacesConfig>(_component.getBucketSpacesConfig());
     }
 }
 
@@ -535,13 +541,23 @@ Distributor::checkBucketForSplit(document::BucketSpace bucketSpace,
     }
 }
 
+// TODO probably need enableNextBucketSpaceConfig() or something similar?
 void
 Distributor::enableNextDistribution()
 {
-    if (_nextDistribution.get()) {
+    if (!_nextDistribution && !_nextBucketSpaceConfig) {
+        return;
+    }
+    if (_nextDistribution) {
         _distribution = _nextDistribution;
-        propagateDefaultDistribution(_distribution);
         _nextDistribution = std::shared_ptr<lib::Distribution>();
+    }
+    if (_nextBucketSpaceConfig) {
+        _activeBucketSpaceConfig = _nextBucketSpaceConfig;
+        _nextBucketSpaceConfig = std::shared_ptr<BucketSpacesConfig>();
+    }
+    if (_distribution) {
+        propagateDefaultDistribution(_distribution);
         _bucketDBUpdater.storageDistributionChanged();
     }
 }
@@ -550,6 +566,20 @@ void
 Distributor::propagateDefaultDistribution(
         std::shared_ptr<const lib::Distribution> distribution)
 {
+    LOG(info, "propagating default distribution config...");
+    bool hasGlobalDocs = false;
+    for (auto& doc_type : _component.getBucketSpacesConfig().documenttype) {
+        LOG(info, "bucket space mapping: %s -> %s", doc_type.name.c_str(), doc_type.bucketspace.c_str());
+        // TODO refactor to remove hardcoded string! Maybe use ConfigurableBucketResolver?
+        if (doc_type.bucketspace == "global") {
+            hasGlobalDocs = true;
+            break;
+        }
+    }
+    if (hasGlobalDocs && !_bucketSpaceRepo->hasGlobalDistribution()) {
+        LOG(info, "Enabling global distribution");
+        _bucketSpaceRepo->enableGlobalDistribution();
+    } // TODO the inverse as well
     _bucketSpaceRepo->setDefaultDistribution(std::move(distribution));
 }
 

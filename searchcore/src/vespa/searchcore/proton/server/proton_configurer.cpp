@@ -116,6 +116,9 @@ ProtonConfigurer::applyConfig(std::shared_ptr<ProtonConfigSnapshot> configSnapsh
         DocTypeName docTypeName(ddbConfig.inputdoctypename);
         // TODO: set bucket space based on config when available
         document::BucketSpace bucketSpace = document::BucketSpace::placeHolder();
+        if (ddbConfig.global) {
+            bucketSpace = document::BucketSpace(2); // FIXME need predefs!
+        }
         configureDocumentDB(*configSnapshot, docTypeName, bucketSpace, ddbConfig.configid, initializeThreads);
     }
     pruneDocumentDBs(*configSnapshot);

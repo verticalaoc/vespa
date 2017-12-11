@@ -7,6 +7,7 @@
 #include "statemanager.h"
 #include <vespa/storage/distributor/distributor.h>
 #include <vespa/storage/common/hostreporter/hostinfo.h>
+#include <vespa/storage/storageserver/configurable_bucket_resolver.h>
 #include <vespa/vespalib/util/exceptions.h>
 
 #include <vespa/log/log.h>
@@ -82,6 +83,19 @@ DistributorNode::handleConfigChange(vespa::config::content::core::StorVisitordis
 {
     framework::TickingLockGuard guard(_threadPool->freezeAllTicks());
     _context.getComponentRegister().setVisitorConfig(c);
+}
+
+void
+DistributorNode::handleConfigChange(vespa::config::content::core::BucketspacesConfig& c)
+{
+    LOG(info, "Got new BucketspacesConfig");
+    framework::TickingLockGuard guard(_threadPool->freezeAllTicks());
+    _context.getComponentRegister().setBucketSpacesConfig(c);
+    // FIXME likely to race to distributor main thread (re-)configuration..!
+    _communicationManager->docApiConverter().setBucketResolver(ConfigurableBucketResolver::from_config(c));
+    for (StorageLink* link = _chain.get(); link != nullptr; link = link->getNextLink()) {
+        link->storageDistributionChanged();
+    }
 }
 
 StorageLink::UP

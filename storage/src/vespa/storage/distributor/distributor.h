@@ -253,6 +253,9 @@ private:
     std::shared_ptr<lib::Distribution> _distribution;
     std::shared_ptr<lib::Distribution> _nextDistribution;
 
+    std::shared_ptr<BucketSpacesConfig> _activeBucketSpaceConfig;
+    std::shared_ptr<BucketSpacesConfig> _nextBucketSpaceConfig;
+
     using MessageQueue = std::vector<std::shared_ptr<api::StorageMessage>>;
     struct IndirectHigherPriority {
         template <typename Lhs, typename Rhs>

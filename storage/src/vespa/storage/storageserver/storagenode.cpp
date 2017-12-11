@@ -15,7 +15,11 @@
 #include <vespa/metrics/metricmanager.h>
 #include <fcntl.h>
 
+#include <iostream> // TEMP
+
 #include <vespa/log/log.h>
+#include <vespa/storage/frameworkimpl/component/servicelayercomponentregisterimpl.h>
+
 LOG_SETUP(".node.server");
 
 using vespa::config::content::StorDistributionConfigBuilder;
@@ -112,6 +116,15 @@ StorageNode::initialize()
 
     _context.getComponentRegister().registerShutdownListener(*this);
 
+    // FIXME configurable flag! Need to know if bucket space should be enabled! This is a naughty hack!
+    // Needs to be done prior to first setDistribution invocation
+    auto& compReg = _context.getComponentRegister();
+    auto* hackyCompReg = dynamic_cast<ServiceLayerComponentRegisterImpl*>(&compReg);
+    if (hackyCompReg) {
+        LOG(info, "enabling global bucket space");
+        hackyCompReg->getBucketSpaceRepo().enableGlobalBucketSpace();
+    }
+
     // Fetch configs needed first. These functions will just grab the config
     // and store them away, while having the config lock.
     subscribeToConfigs();
@@ -170,6 +183,7 @@ StorageNode::initialize()
     _deadLockDetector->setWaitSlack(framework::MilliSecTime(
             static_cast<uint32_t>(_serverConfig->deadLockDetectorTimeoutSlack * 1000)));
 
+    std::cerr << "creating dat chain\n";
     _chain.reset(createChain().release());
 
     // Start the metric manager, such that it starts generating snapshots
@@ -300,7 +314,7 @@ StorageNode::handleLiveConfigUpdate(const InitialGuard & initGuard)
         if (updated) {
             _context.getComponentRegister().setDistribution(make_shared<lib::Distribution>(oldC));
             for (StorageLink* link = _chain.get(); link != 0; link = link->getNextLink()) {
-                link->storageDistributionChanged();
+                link->storageDistributionChanged(); // TODO also invoke for bucket space config change?
             }
         }
     }

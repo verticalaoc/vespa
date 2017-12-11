@@ -1,6 +1,12 @@
 // Copyright 2017 Yahoo Holdings. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
 
 #include "servicelayercomponentregisterimpl.h"
+#include <vespa/storage/storageserver/configurable_bucket_resolver.h>
+#include <vespa/storage/common/global_bucket_space_distribution_converter.h>
+
+#include <vespa/config/config.h>
+#include <vespa/config/print/asciiconfigreader.h> // TODO temp
+
 #include <vespa/vespalib/util/exceptions.h>
 
 namespace storage {
@@ -36,6 +42,20 @@ ServiceLayerComponentRegisterImpl::setDiskCount(uint16_t count)
     }
 }
 
+using DistributionConfig = vespa::config::content::StorDistributionConfig;
+
+namespace {
+
+// FIXME dupe with global_bucket_space_distribution_converter.cpp
+std::unique_ptr<DistributionConfig> string_to_config(const vespalib::string& cfg) {
+    vespalib::asciistream iss(cfg);
+    config::AsciiConfigReader<vespa::config::content::StorDistributionConfig> reader(iss);
+    return reader.read();
+}
+
+}
+
+
 void
 ServiceLayerComponentRegisterImpl::setDistribution(lib::Distribution::SP distribution)
 {
@@ -43,6 +63,14 @@ ServiceLayerComponentRegisterImpl::setDistribution(lib::Distribution::SP distrib
     for (const auto &elem : _bucketSpaceRepo) {
         elem.second->setDistribution(distribution);
     }
+    _bucketSpaceRepo.get(FixedBucketSpaces::default_space()).setDistribution(distribution);
+    if (_bucketSpaceRepo.hasGlobalBucketSpace()) {
+        auto global_distr_config = GlobalBucketSpaceDistributionConverter::convert_to_global(
+                *string_to_config(distribution->serialize()));
+        auto global_distr = std::make_shared<const lib::Distribution>(*global_distr_config);
+        _bucketSpaceRepo.get(FixedBucketSpaces::global_space()).setDistribution(std::move(global_distr));
+    }
+    // FIXME this is not space aware!
     StorageComponentRegisterImpl::setDistribution(distribution);
 }
 

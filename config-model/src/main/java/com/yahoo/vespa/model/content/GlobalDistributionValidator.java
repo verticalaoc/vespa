@@ -24,8 +24,8 @@ public class GlobalDistributionValidator {
                          Set<NewDocumentType> globallyDistributedDocuments,
                          Redundancy redundancy) {
 
-        verifyGlobalDocumentsHaveRequiredRedundancy(globallyDistributedDocuments, redundancy);
-        verifySearchableCopiesIsSameAsRedundancy(globallyDistributedDocuments, redundancy);
+        //verifyGlobalDocumentsHaveRequiredRedundancy(globallyDistributedDocuments, redundancy);
+        //verifySearchableCopiesIsSameAsRedundancy(globallyDistributedDocuments, redundancy);
         verifyReferredDocumentsArePresent(documentDefinitions);
         verifyReferredDocumentsAreGlobal(documentDefinitions, globallyDistributedDocuments);
     }
