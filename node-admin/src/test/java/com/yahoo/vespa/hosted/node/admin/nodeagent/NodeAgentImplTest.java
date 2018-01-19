@@ -64,6 +64,7 @@ public class NodeAgentImplTest {
     private static final double MIN_DISK_AVAILABLE_GB = 250;
     private static final String vespaVersion = "1.2.3";
 
+    private final String parentHostname = "parent.host.name.yahoo.com";
     private final String hostName = "host1.test.yahoo.com";
     private final ContainerName containerName = new ContainerName("host1");
     private final DockerImage dockerImage = new DockerImage("dockerImage");
@@ -78,12 +79,6 @@ public class NodeAgentImplTest {
 
     private final PathResolver pathResolver = mock(PathResolver.class);
     private final ManualClock clock = new ManualClock();
-    private final Environment environment = new Environment.Builder()
-            .environment("dev")
-            .region("us-east-1")
-            .parentHostHostname("parent.host.name.yahoo.com")
-            .inetAddressResolver(new InetAddressResolver())
-            .pathResolver(pathResolver).build();
 
     private final ContainerNodeSpec.Builder nodeSpecBuilder = new ContainerNodeSpec.Builder()
             .hostname(hostName)
@@ -661,7 +656,7 @@ public class NodeAgentImplTest {
         doNothing().when(storageMaintainer).writeFilebeatConfig(any(), any());
         doNothing().when(storageMaintainer).writeMetricsConfig(any(), any());
 
-        return new NodeAgentImpl(hostName, nodeRepository, orchestrator, dockerOperations,
-                storageMaintainer, aclMaintainer, environment, clock, NODE_AGENT_SCAN_INTERVAL);
+        return new NodeAgentImpl(parentHostname, hostName, nodeRepository, orchestrator, dockerOperations,
+                storageMaintainer, aclMaintainer, clock, NODE_AGENT_SCAN_INTERVAL);
     }
 }

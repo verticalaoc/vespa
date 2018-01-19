@@ -20,7 +20,6 @@ import com.yahoo.vespa.hosted.node.admin.maintenance.StorageMaintainer;
 import com.yahoo.vespa.hosted.node.admin.noderepository.NodeRepository;
 import com.yahoo.vespa.hosted.node.admin.orchestrator.Orchestrator;
 import com.yahoo.vespa.hosted.node.admin.orchestrator.OrchestratorException;
-import com.yahoo.vespa.hosted.node.admin.util.Environment;
 import com.yahoo.vespa.hosted.node.admin.util.PrefixLogger;
 import com.yahoo.vespa.hosted.provision.Node;
 
@@ -65,13 +64,13 @@ public class NodeAgentImpl implements NodeAgent {
     private DockerImage imageBeingDownloaded = null;
 
     private final ContainerName containerName;
+    private final String parentHostname;
     private final String hostname;
     private final NodeRepository nodeRepository;
     private final Orchestrator orchestrator;
     private final DockerOperations dockerOperations;
     private final StorageMaintainer storageMaintainer;
     private final Runnable aclMaintainer;
-    private final Environment environment;
     private final Clock clock;
     private final Duration timeBetweenEachConverge;
 
@@ -110,24 +109,24 @@ public class NodeAgentImpl implements NodeAgent {
     private CpuUsageReporter lastCpuMetric = new CpuUsageReporter();
 
     public NodeAgentImpl(
+            final String parentHostname,
             final String hostName,
             final NodeRepository nodeRepository,
             final Orchestrator orchestrator,
             final DockerOperations dockerOperations,
             final StorageMaintainer storageMaintainer,
             final Runnable aclMaintainer,
-            final Environment environment,
             final Clock clock,
             final Duration timeBetweenEachConverge) {
         this.containerName = ContainerName.fromHostname(hostName);
         this.logger = PrefixLogger.getNodeAgentLogger(NodeAgentImpl.class, containerName);
+        this.parentHostname = parentHostname;
         this.hostname = hostName;
         this.nodeRepository = nodeRepository;
         this.orchestrator = orchestrator;
         this.dockerOperations = dockerOperations;
         this.storageMaintainer = storageMaintainer;
         this.aclMaintainer = aclMaintainer;
-        this.environment = environment;
         this.clock = clock;
         this.timeBetweenEachConverge = timeBetweenEachConverge;
         this.lastConverge = clock.instant();
@@ -517,7 +516,7 @@ public class NodeAgentImpl implements NodeAgent {
                 .add("host", hostname)
                 .add("role", "tenants")
                 .add("state", nodeSpec.nodeState.toString())
-                .add("parentHostname", environment.getParentHostHostname());
+                .add("parentHostname", parentHostname);
         Dimensions dimensions = dimensionsBuilder.build();
 
         Docker.ContainerStats stats = containerStats.get();

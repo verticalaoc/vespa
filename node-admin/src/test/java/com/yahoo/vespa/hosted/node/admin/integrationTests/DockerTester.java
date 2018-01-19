@@ -6,6 +6,7 @@ import com.yahoo.metrics.simple.MetricReceiver;
 import com.yahoo.vespa.hosted.dockerapi.Docker;
 import com.yahoo.vespa.hosted.dockerapi.metrics.MetricReceiverWrapper;
 import com.yahoo.vespa.hosted.node.admin.ContainerNodeSpec;
+import com.yahoo.vespa.hosted.node.admin.NodeAdminBaseConfig;
 import com.yahoo.vespa.hosted.node.admin.docker.DockerOperations;
 import com.yahoo.vespa.hosted.node.admin.docker.DockerOperationsImpl;
 import com.yahoo.vespa.hosted.node.admin.maintenance.acl.AclMaintainer;
@@ -23,6 +24,7 @@ import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.function.Function;
 
 import static org.mockito.Matchers.any;
@@ -52,22 +54,27 @@ public class DockerTester implements AutoCloseable {
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
+        NodeAdminBaseConfig.ConfigServerConfig configServerConfig = new NodeAdminBaseConfig.ConfigServerConfig(
+                new NodeAdminBaseConfig.ConfigServerConfig.Builder()
+                        .hosts(Collections.emptyList())
+        );
 
+        String parentHostname = "parent.region.domain.tld";
         Environment environment = new Environment.Builder()
                 .inetAddressResolver(inetAddressResolver)
                 .pathResolver(new PathResolver(Paths.get("/tmp"), Paths.get("/tmp"))).build();
         Clock clock = Clock.systemUTC();
-        DockerOperations dockerOperations = new DockerOperationsImpl(dockerMock, environment, null);
+        DockerOperations dockerOperations = new DockerOperationsImpl(dockerMock, configServerConfig, environment, null);
         StorageMaintainerMock storageMaintainer = new StorageMaintainerMock(dockerOperations, null, environment, callOrderVerifier, clock);
         AclMaintainer aclMaintainer = mock(AclMaintainer.class);
 
 
         MetricReceiverWrapper mr = new MetricReceiverWrapper(MetricReceiver.nullImplementation);
-        Function<String, NodeAgent> nodeAgentFactory = (hostName) -> new NodeAgentImpl(hostName, nodeRepositoryMock,
-                orchestratorMock, dockerOperations, storageMaintainer, aclMaintainer, environment, clock, NODE_AGENT_SCAN_INTERVAL);
+        Function<String, NodeAgent> nodeAgentFactory = (hostName) -> new NodeAgentImpl(parentHostname, hostName, nodeRepositoryMock,
+                orchestratorMock, dockerOperations, storageMaintainer, aclMaintainer, clock, NODE_AGENT_SCAN_INTERVAL);
         nodeAdmin = new NodeAdminImpl(dockerOperations, nodeAgentFactory, storageMaintainer, aclMaintainer, mr, Clock.systemUTC());
         nodeAdminStateUpdater = new NodeAdminStateUpdater(nodeRepositoryMock, orchestratorMock, storageMaintainer,
-                nodeAdmin, "basehostname", clock, NODE_ADMIN_CONVERGE_STATE_INTERVAL, new ClassLocking());
+                nodeAdmin, parentHostname, clock, NODE_ADMIN_CONVERGE_STATE_INTERVAL, new ClassLocking());
         nodeAdminStateUpdater.start();
     }
 

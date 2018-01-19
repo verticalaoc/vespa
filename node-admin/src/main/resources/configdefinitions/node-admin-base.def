@@ -1,0 +1,28 @@
+# Copyright 2018 Yahoo Inc. Licensed under the terms of the Apache 2.0 license. See LICENSE in the project root.
+namespace=vespa.hosted.node.admin
+
+zoneConfig.environment                          string
+zoneConfig.region                               string
+
+configServerConfig.hosts[]                      string
+configServerConfig.post                         int                         default=8080 range=[1,65535]
+configServerConfig.scheme                       string                      default="http"
+
+# Optional options used to authenticate config server
+configServerConfig.athenzDomain                 string                      default=""
+configServerConfig.serviceName                  string                      default=""
+
+# Optional options about key store to use when communicating with config server
+configServerConfig.keyStoreConfig.path          string                      default=""      # Path to keystore
+configServerConfig.keyStoreConfig.type          enum { JKS, PEM, PKCS12 }   default=JKS
+configServerConfig.keyStoreConfig.password      string                      default=""
+
+# Optional options about trust store to use to authenticate config server
+configServerConfig.trustStoreConfig.path        string                      default=""
+configServerConfig.trustStoreConfig.type        enum { JKS, PEM, PKCS12 }   default=JKS
+configServerConfig.trustStoreConfig.password    string                      default=""
+
+# Vespa endpoint where coredumps metadata will be fed
+coredumpFeedEndpoint                            string                      default=""
+
+

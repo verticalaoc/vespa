@@ -235,11 +235,10 @@ public class RunInContainerTest {
 
         private final StorageMaintainer storageMaintainer = mock(StorageMaintainer.class);
         private final AclMaintainer aclMaintainer = mock(AclMaintainer.class);
-        private final Environment environment = new Environment.Builder().build();
         private final MetricReceiverWrapper mr = new MetricReceiverWrapper(MetricReceiver.nullImplementation);
         private final Function<String, NodeAgent> nodeAgentFactory =
-                (hostName) -> new NodeAgentImpl(hostName, nodeRepositoryMock, orchestratorMock, dockerOperationsMock,
-                        storageMaintainer, aclMaintainer, environment, Clock.systemUTC(), NODE_AGENT_SCAN_INTERVAL);
+                (hostName) -> new NodeAgentImpl(parentHostname, hostName, nodeRepositoryMock, orchestratorMock, dockerOperationsMock,
+                        storageMaintainer, aclMaintainer, Clock.systemUTC(), NODE_AGENT_SCAN_INTERVAL);
         private final NodeAdmin nodeAdmin = new NodeAdminImpl(dockerOperationsMock, nodeAgentFactory, storageMaintainer, aclMaintainer, mr, Clock.systemUTC());
         private final NodeAdminStateUpdater nodeAdminStateUpdater = new NodeAdminStateUpdater(nodeRepositoryMock,
                 orchestratorMock, storageMaintainer, nodeAdmin, "localhost.test.yahoo.com", Clock.systemUTC(), NODE_ADMIN_CONVERGE_STATE_INTERVAL, new ClassLocking());

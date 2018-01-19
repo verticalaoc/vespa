@@ -20,8 +20,16 @@ public class StorageMaintainerMock extends StorageMaintainer {
     private final CallOrderVerifier callOrderVerifier;
 
     public StorageMaintainerMock(DockerOperations dockerOperations, ProcessExecuter processExecuter, Environment environment, CallOrderVerifier callOrderVerifier, Clock clock) {
-        super(dockerOperations, processExecuter, new MetricReceiverWrapper(MetricReceiver.nullImplementation), environment, clock);
+        super(null, dockerOperations, processExecuter, new MetricReceiverWrapper(MetricReceiver.nullImplementation), environment, clock);
         this.callOrderVerifier = callOrderVerifier;
+    }
+
+    @Override
+    public void writeMetricsConfig(ContainerName containerName, ContainerNodeSpec nodeSpec) {
+    }
+
+    @Override
+    public void writeFilebeatConfig(ContainerName containerName, ContainerNodeSpec nodeSpec) {
     }
 
     @Override

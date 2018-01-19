@@ -6,6 +6,7 @@ import com.yahoo.net.HostName;
 import com.yahoo.system.ProcessExecuter;
 import com.yahoo.vespa.hosted.dockerapi.Docker;
 import com.yahoo.vespa.hosted.dockerapi.metrics.MetricReceiverWrapper;
+import com.yahoo.vespa.hosted.node.admin.NodeAdminBaseConfig;
 import com.yahoo.vespa.hosted.node.admin.component.AdminComponent;
 import com.yahoo.vespa.hosted.node.admin.docker.DockerOperations;
 import com.yahoo.vespa.hosted.node.admin.docker.DockerOperationsImpl;
@@ -32,6 +33,7 @@ public class DockerAdminComponent implements AdminComponent {
     private static final Duration NODE_AGENT_SCAN_INTERVAL = Duration.ofSeconds(30);
     private static final Duration NODE_ADMIN_CONVERGE_STATE_INTERVAL = Duration.ofSeconds(30);
 
+    private final NodeAdminBaseConfig nodeAdminBaseConfig;
     private final NodeAdminConfig config;
     private final Docker docker;
     private final MetricReceiverWrapper metricReceiver;
@@ -41,10 +43,12 @@ public class DockerAdminComponent implements AdminComponent {
 
     private Optional<NodeAdminStateUpdater> nodeAdminStateUpdater = Optional.empty();
 
-    public DockerAdminComponent(NodeAdminConfig config,
+    public DockerAdminComponent(NodeAdminBaseConfig nodeAdminBaseConfig,
+                                NodeAdminConfig config,
                                 Docker docker,
                                 MetricReceiverWrapper metricReceiver,
                                 ClassLocking classLocking) {
+        this.nodeAdminBaseConfig = nodeAdminBaseConfig;
         this.config = config;
         this.docker = docker;
         this.metricReceiver = metricReceiver;
@@ -58,8 +62,7 @@ public class DockerAdminComponent implements AdminComponent {
         }
 
         Environment environment = new Environment();
-        requestExecutor = ConfigServerHttpRequestExecutor.create(
-                environment.getConfigServerUris(), environment.getKeyStoreOptions(), environment.getTrustStoreOptions());
+        requestExecutor = ConfigServerHttpRequestExecutor.create(nodeAdminBaseConfig.configServerConfig());
         NodeRepository nodeRepository = new NodeRepositoryImpl(requestExecutor);
         Orchestrator orchestrator = new OrchestratorImpl(requestExecutor);
 
@@ -70,10 +73,12 @@ public class DockerAdminComponent implements AdminComponent {
         docker.start();
         DockerOperations dockerOperations = new DockerOperationsImpl(
                 docker,
+                nodeAdminBaseConfig.configServerConfig(),
                 environment,
                 processExecuter);
 
         StorageMaintainer storageMaintainer = new StorageMaintainer(
+                nodeAdminBaseConfig,
                 dockerOperations,
                 processExecuter,
                 metricReceiver,
@@ -86,13 +91,13 @@ public class DockerAdminComponent implements AdminComponent {
                 dockerHostHostName);
 
         Function<String, NodeAgent> nodeAgentFactory = (hostName) -> new NodeAgentImpl(
+                dockerHostHostName,
                 hostName,
                 nodeRepository,
                 orchestrator,
                 dockerOperations,
                 storageMaintainer,
                 aclMaintainer,
-                environment,
                 clock,
                 NODE_AGENT_SCAN_INTERVAL);
 

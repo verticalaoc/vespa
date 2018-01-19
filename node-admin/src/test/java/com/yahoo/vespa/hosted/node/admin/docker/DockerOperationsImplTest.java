@@ -30,7 +30,7 @@ public class DockerOperationsImplTest {
     private final Environment environment = new Environment.Builder().build();
     private final Docker docker = mock(Docker.class);
     private final ProcessExecuter processExecuter = mock(ProcessExecuter.class);
-    private final DockerOperationsImpl dockerOperations = new DockerOperationsImpl(docker, environment, processExecuter);
+    private final DockerOperationsImpl dockerOperations = new DockerOperationsImpl(docker, null, environment, processExecuter);
 
     @Test
     public void processResultFromNodeProgramWhenSuccess() throws Exception {

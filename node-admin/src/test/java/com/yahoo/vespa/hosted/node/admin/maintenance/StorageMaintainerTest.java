@@ -8,6 +8,7 @@ import com.yahoo.test.ManualClock;
 import com.yahoo.vespa.hosted.dockerapi.ContainerName;
 import com.yahoo.vespa.hosted.dockerapi.metrics.MetricReceiverWrapper;
 import com.yahoo.vespa.hosted.node.admin.ContainerNodeSpec;
+import com.yahoo.vespa.hosted.node.admin.NodeAdminBaseConfig;
 import com.yahoo.vespa.hosted.node.admin.docker.DockerOperations;
 import com.yahoo.vespa.hosted.node.admin.util.Environment;
 import com.yahoo.vespa.hosted.node.admin.util.PathResolver;
@@ -37,7 +38,15 @@ public class StorageMaintainerTest {
             .pathResolver(new PathResolver()).build();
     private final DockerOperations docker = mock(DockerOperations.class);
     private final ProcessExecuter processExecuter = mock(ProcessExecuter.class);
-    private final StorageMaintainer storageMaintainer = new StorageMaintainer(docker, processExecuter,
+    private final NodeAdminBaseConfig nodeAdminBaseConfig = new NodeAdminBaseConfig(
+            new NodeAdminBaseConfig.Builder()
+                    .zoneConfig(
+                            new NodeAdminBaseConfig.ZoneConfig.Builder()
+                                    .region("us-north-1")
+                                    .environment("dev"))
+                    .coredumpFeedEndpoint("https://dumps.domain.tld/path"));
+
+    private final StorageMaintainer storageMaintainer = new StorageMaintainer(nodeAdminBaseConfig, docker, processExecuter,
             new MetricReceiverWrapper(MetricReceiver.nullImplementation), environment, clock);
 
     @Rule

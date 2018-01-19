@@ -6,6 +6,7 @@ import com.yahoo.application.Networking;
 import com.yahoo.application.container.JDisc;
 import com.yahoo.vespa.hosted.node.admin.ContainerNodeSpec;
 import com.yahoo.vespa.hosted.dockerapi.DockerImage;
+import com.yahoo.vespa.hosted.node.admin.NodeAdminBaseConfig;
 import com.yahoo.vespa.hosted.node.admin.nodeagent.NodeAttributes;
 import com.yahoo.vespa.hosted.node.admin.util.ConfigServerHttpRequestExecutor;
 import com.yahoo.vespa.hosted.provision.Node;
@@ -17,7 +18,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.URI;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -56,8 +56,12 @@ public class NodeRepositoryImplTest {
     @Before
     public void startContainer() throws Exception {
         final int port = findRandomOpenPort();
-        requestExecutor = ConfigServerHttpRequestExecutor.create(
-                Collections.singleton(URI.create("http://127.0.0.1:" + port)), Optional.empty(), Optional.empty());
+        NodeAdminBaseConfig.ConfigServerConfig configServerConfig = new NodeAdminBaseConfig.ConfigServerConfig(
+                new NodeAdminBaseConfig.ConfigServerConfig.Builder()
+                        .hosts(Collections.singleton("127.0.0.1"))
+                        .post(port)
+        );
+        requestExecutor = ConfigServerHttpRequestExecutor.create(configServerConfig);
         container = JDisc.fromServicesXml(ContainerConfig.servicesXmlV2(port), Networking.enable);
     }
 

@@ -3,8 +3,9 @@ package com.yahoo.vespa.hosted.node.admin.logging;
 
 import static com.yahoo.vespa.defaults.Defaults.getDefaults;
 import com.yahoo.vespa.hosted.node.admin.ContainerNodeSpec;
-import com.yahoo.vespa.hosted.node.admin.util.Environment;
+import com.yahoo.vespa.hosted.node.admin.NodeAdminBaseConfig;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -27,25 +28,27 @@ public class FilebeatConfigProvider {
 
     private static final int logstashWorkers = 3;
     private static final int logstashBulkMaxSize = 2048;
-    private final Environment environment;
+    private final List<String> logstashNodes;
+    private final NodeAdminBaseConfig.ZoneConfig zoneConfig;
 
-    public FilebeatConfigProvider(Environment environment) {
-        this.environment = environment;
+    public FilebeatConfigProvider(List<String> logstashNodes, NodeAdminBaseConfig.ZoneConfig zoneConfig) {
+        this.logstashNodes = logstashNodes;
+        this.zoneConfig = zoneConfig;
     }
 
     public Optional<String> getConfig(ContainerNodeSpec containerNodeSpec) {
-
-        if (environment.getLogstashNodes().size() == 0 || !containerNodeSpec.owner.isPresent()) {
+        if (logstashNodes.size() == 0 || !containerNodeSpec.owner.isPresent()) {
             return Optional.empty();
         }
+
         ContainerNodeSpec.Owner owner = containerNodeSpec.owner.get();
-        int spoolSize = environment.getLogstashNodes().size() * logstashWorkers * logstashBulkMaxSize;
-        String logstashNodeString = environment.getLogstashNodes().stream()
+        int spoolSize = logstashNodes.size() * logstashWorkers * logstashBulkMaxSize;
+        String logstashNodeString = logstashNodes.stream()
                 .map(this::addQuotes)
                 .collect(Collectors.joining(","));
         return Optional.of(getTemplate()
-                .replaceAll(ENVIRONMENT_FIELD, environment.getEnvironment())
-                .replaceAll(REGION_FIELD, environment.getRegion())
+                .replaceAll(ENVIRONMENT_FIELD, zoneConfig.environment())
+                .replaceAll(REGION_FIELD, zoneConfig.region())
                 .replaceAll(FILEBEAT_SPOOL_SIZE_FIELD, Integer.toString(spoolSize))
                 .replaceAll(LOGSTASH_HOSTS_FIELD, logstashNodeString)
                 .replaceAll(LOGSTASH_WORKERS_FIELD, Integer.toString(logstashWorkers))

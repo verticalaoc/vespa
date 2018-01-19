@@ -12,19 +12,18 @@ import com.yahoo.vespa.hosted.dockerapi.DockerImpl;
 import com.yahoo.vespa.hosted.dockerapi.DockerNetworkCreator;
 import com.yahoo.vespa.hosted.dockerapi.ProcessResult;
 import com.yahoo.vespa.hosted.node.admin.ContainerNodeSpec;
+import com.yahoo.vespa.hosted.node.admin.NodeAdminBaseConfig;
 import com.yahoo.vespa.hosted.node.admin.util.Environment;
 import com.yahoo.vespa.hosted.node.admin.util.PrefixLogger;
 
 import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
-import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.yahoo.vespa.defaults.Defaults.getDefaults;
@@ -84,10 +83,12 @@ public class DockerOperationsImpl implements DockerOperations {
 
     private final Docker docker;
     private final Environment environment;
+    private final NodeAdminBaseConfig.ConfigServerConfig configServerConfig;
     private final ProcessExecuter processExecuter;
 
-    public DockerOperationsImpl(Docker docker, Environment environment, ProcessExecuter processExecuter) {
+    public DockerOperationsImpl(Docker docker, NodeAdminBaseConfig.ConfigServerConfig configServerConfig, Environment environment, ProcessExecuter processExecuter) {
         this.docker = docker;
+        this.configServerConfig = configServerConfig;
         this.environment = environment;
         this.processExecuter = processExecuter;
     }
@@ -101,9 +102,7 @@ public class DockerOperationsImpl implements DockerOperations {
             InetAddress nodeInetAddress = environment.getInetAddressForHost(nodeSpec.hostname);
             final boolean isIPv6 = nodeInetAddress instanceof Inet6Address;
 
-            String configServers = environment.getConfigServerUris().stream()
-                    .map(URI::getHost)
-                    .collect(Collectors.joining(","));
+            String configServers = String.join(",", configServerConfig.hosts());
             Docker.CreateContainerCommand command = docker.createContainerCommand(
                     nodeSpec.wantedDockerImage.get(),
                     ContainerResources.from(nodeSpec.minCpuCores, nodeSpec.minMainMemoryAvailableGb),

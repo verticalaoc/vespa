@@ -13,6 +13,7 @@ import com.yahoo.vespa.hosted.dockerapi.metrics.CounterWrapper;
 import com.yahoo.vespa.hosted.dockerapi.metrics.Dimensions;
 import com.yahoo.vespa.hosted.dockerapi.metrics.MetricReceiverWrapper;
 import com.yahoo.vespa.hosted.node.admin.ContainerNodeSpec;
+import com.yahoo.vespa.hosted.node.admin.NodeAdminBaseConfig;
 import com.yahoo.vespa.hosted.node.admin.docker.DockerOperations;
 import com.yahoo.vespa.hosted.node.admin.logging.FilebeatConfigProvider;
 import com.yahoo.vespa.hosted.node.admin.util.Environment;
@@ -48,6 +49,7 @@ public class StorageMaintainer {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final CounterWrapper numberOfNodeAdminMaintenanceFails;
+    private final NodeAdminBaseConfig config;
     private final DockerOperations dockerOperations;
     private final ProcessExecuter processExecuter;
     private final Environment environment;
@@ -56,7 +58,9 @@ public class StorageMaintainer {
     private Map<ContainerName, MaintenanceThrottler> maintenanceThrottlerByContainerName = new ConcurrentHashMap<>();
 
 
-    public StorageMaintainer(DockerOperations dockerOperations, ProcessExecuter processExecuter, MetricReceiverWrapper metricReceiver, Environment environment, Clock clock) {
+    public StorageMaintainer(NodeAdminBaseConfig config, DockerOperations dockerOperations, ProcessExecuter processExecuter,
+                             MetricReceiverWrapper metricReceiver, Environment environment, Clock clock) {
+        this.config = config;
         this.dockerOperations = dockerOperations;
         this.processExecuter = processExecuter;
         this.environment = environment;
@@ -71,7 +75,7 @@ public class StorageMaintainer {
 
         Path vespaCheckPath = Paths.get(getDefaults().underVespaHome("libexec/yms/yms_check_vespa"));
         SecretAgentScheduleMaker vespaSchedule = new SecretAgentScheduleMaker("vespa", 60, vespaCheckPath, "all")
-                .withTag("parentHostname", environment.getParentHostHostname());
+                .withTag("parentHostname", getDefaults().vespaHostname());
 
         Path hostLifeCheckPath = Paths.get(getDefaults().underVespaHome("libexec/yms/yms_check_host_life"));
         SecretAgentScheduleMaker hostLifeSchedule = new SecretAgentScheduleMaker("host-life", 60, hostLifeCheckPath)
@@ -80,8 +84,8 @@ public class StorageMaintainer {
                 .withTag("flavor", nodeSpec.nodeFlavor)
                 .withTag("canonicalFlavor", nodeSpec.nodeCanonicalFlavor)
                 .withTag("state", nodeSpec.nodeState.toString())
-                .withTag("zone", environment.getZone())
-                .withTag("parentHostname", environment.getParentHostHostname());
+                .withTag("zone", config.zoneConfig().environment() + "." + config.zoneConfig().region())
+                .withTag("parentHostname", getDefaults().vespaHostname());
         nodeSpec.owner.ifPresent(owner -> hostLifeSchedule
                 .withTag("tenantName", owner.tenant)
                 .withTag("app", owner.application + "." + owner.instance)
@@ -106,7 +110,8 @@ public class StorageMaintainer {
     public void writeFilebeatConfig(ContainerName containerName, ContainerNodeSpec nodeSpec) {
         PrefixLogger logger = PrefixLogger.getNodeAgentLogger(StorageMaintainer.class, containerName);
         try {
-            FilebeatConfigProvider filebeatConfigProvider = new FilebeatConfigProvider(environment);
+            FilebeatConfigProvider filebeatConfigProvider = new FilebeatConfigProvider(
+                    environment.getLogstashNodes(), config.zoneConfig());
             Optional<String> config = filebeatConfigProvider.getConfig(nodeSpec);
             if (!config.isPresent()) {
                 logger.error("Was not able to generate a config for filebeat, ignoring filebeat file creation." + nodeSpec.toString());
@@ -226,8 +231,8 @@ public class StorageMaintainer {
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("hostname", nodeSpec.hostname);
         attributes.put("parent_hostname", HostName.getLocalhost());
-        attributes.put("region", environment.getRegion());
-        attributes.put("environment", environment.getEnvironment());
+        attributes.put("region", config.zoneConfig().region());
+        attributes.put("environment", config.zoneConfig().environment());
         attributes.put("flavor", nodeSpec.nodeFlavor);
         attributes.put("kernel_version", System.getProperty("os.version"));
 
@@ -243,7 +248,7 @@ public class StorageMaintainer {
                 .withArgument("doneCoredumpsPath", environment.pathInNodeAdminToDoneCoredumps())
                 .withArgument("coredumpsPath", environment.pathInNodeAdminFromPathInNode(
                         containerName, getDefaults().underVespaHome("var/crash")))
-                .withArgument("feedEndpoint", environment.getCoredumpFeedEndpoint())
+                .withArgument("feedEndpoint", config.coredumpFeedEndpoint())
                 .withArgument("attributes", attributes);
     }
 
